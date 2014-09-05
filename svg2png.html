@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVG 2 PNG</title>
+    <link href='http://fonts.googleapis.com/css?family=Lato:300,400' rel='stylesheet' type='text/css'>
+<style type="text/css">
+html,
+input,
+button {
+    font-family: 'Lato';
+    background-color: #444;
+    color: #fff;
+}
+article {
+    width: 960px;
+    margin: 20px auto;
+    border: solid 1px #fff;
+    border-radius: 4px;
+    background-size: cover;
+    background-position: 50% 50%;
+}
+article > section > div {
+    padding: 10px 20px;
+}
+article > section:not(:last-child) {
+    border-bottom: solid 1px #fff;
+}
+.header,
+.output-edit {
+    background-color: rgba(142, 142, 142, .9);
+}
+.header {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+.waiting-message {
+    line-height: 100px;
+}
+body:not(.waiting) .waiting-message {
+    display: none;
+}
+.output-edit {
+    margin-top: 400px;
+    border-top: solid 1px #fff;
+}
+body.waiting .output-edit {
+    display: none;
+}
+.edit-panel {
+    text-align: right;
+}
+input[type=text] {
+    border: solid 1px transparent;
+    background: transparent;
+    width: 120px;
+    border-bottom: solid 1px rgba(255, 255, 255, .3);
+}
+input[type=text]:hover,
+input[type=text]:focus {
+    outline: none;
+    border-bottom: solid 1px rgba(255, 255, 255, 1);
+}
+button {
+    outline: none;
+    border: solid 1px rgba(255, 255, 255, .3);
+    background: transparent;
+    border-radius: 4px;
+}
+button:hover,
+button:focus {
+    border-color: rgba(255, 255, 255, 1);
+    cursor: pointer;
+}
+</style>
+</head>
+<body class="waiting">
+    <article>
+        <section>
+            <div class="header">
+                SVG 2 Png by Edward
+            </div>
+        </section>
+        <section id="output">
+            <div class="waiting-message">
+                Drag SVG file to this page first
+            </div>
+            <div class="output-edit">
+                <div class="edit-panel">
+                    <input type="text" id="get-width" value="auto">
+                     x 
+                    <input type="text" id="get-height" value="auto">
+                    <button id="get-png">Get Png</button>
+                </div>
+            </div>
+        </section>
+    </article>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script type="text/javascript">
+var svg2png = {
+    loaded: [],
+    current: '',
+    pushLoaded: function (data) {
+        svg2png.loaded.push(data);
+    },
+    checkState: function () {
+        if(svg2png.loaded.length > 0) {
+            $('body').removeClass('waiting');
+            $('body').addClass('loaded');
+            svg2png.current = svg2png.loaded[svg2png.loaded.length - 1];
+            svg2png.updateEditor();
+        }
+    },
+    updateEditor: function() {
+        $('article').css({backgroundImage: 'url(' + svg2png.current + ')'});
+        $('article').css({backgroundColor: '#fff'});
+    },
+    toPng: function (img) {
+        // Create an empty canvas element
+        var canvas = document.createElement("canvas");
+        console.log(canvas.width = img.width);
+        console.log(canvas.height = img.height);
+
+        // Copy the image contents to the canvas
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Get the data-URL formatted image
+        // Firefox supports PNG and JPEG. You could check img.src to
+        // guess the original format, but be aware the using "image/jpg"
+        // will re-encode the image.
+        var dataURL = canvas.toDataURL("image/png");
+
+        return dataURL;
+    }
+};
+
+$(function () {
+    // Begin of onload
+    $('html').on('dragover', function(event) {
+        event.preventDefault();  
+        event.stopPropagation();
+    });
+
+    $('html').on('dragleave', function(event) {
+        event.preventDefault();  
+        event.stopPropagation();
+    });
+
+    $('html').on('drop', function(event) {
+        event.preventDefault();  
+        event.stopPropagation();
+        var files = event.originalEvent.dataTransfer.files;
+        if(typeof(files) !== 'undefined') {
+            console.log('get: files');
+            for(var i = files.length - 1; i >= 0; i--) {
+                if(files[i].type === 'image/svg+xml') {
+                    console.log('[ok svg  ]' + files[i].name);
+                    var reader = new FileReader();
+                    reader.onload = function(event) {
+                        svg2png.pushLoaded(event.target.result);
+                        svg2png.checkState();
+                    }
+                    reader.readAsDataURL(files[i]);
+                } else {
+                    console.log('[invalid ]' + files[i].name);
+                    return;
+                }
+            };
+        }
+    });
+
+    $('#get-png').click(function () {
+        var img = $('<img></img>');
+        img.attr('src', svg2png.current);
+        imgElem = img[0];
+        customWidth = parseInt($('#get-width').val());
+        customHeight = parseInt($('#get-height').val());
+        if ($('#get-width').val() !== 'auto' && isNaN(customWidth) !== true) {
+            imgElem.height = imgElem.height * (customWidth / imgElem.width);
+            imgElem.width = customWidth;
+            if ($('#get-height').val() !== 'auto' && isNaN(customHeight) !== true) {
+                imgElem.height = customHeight;
+            }
+        } else if ($('#get-height').val() !== 'auto' && isNaN(customHeight) !== true) {
+            imgElem.width = imgElem.width * (customHeight / imgElem.height);
+            imgElem.height = customHeight;
+        }
+        var outputLink = $('<a style="display: none"></a>')
+            .attr('download', 'output-' + imgElem.width + '-' + imgElem.height + '.png');
+        outputLink.attr('href', svg2png.toPng(imgElem));
+        outputLink[0].click();
+        console.log(svg2png.toPng(imgElem));
+    });
+});
+</script>
+</body>
+</html>
